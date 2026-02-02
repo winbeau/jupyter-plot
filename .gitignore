@@ -1,10 +1,36 @@
 # Python-generated files
 __pycache__/
-*.py[oc]
+*.py[cod]
 build/
 dist/
 wheels/
 *.egg-info
 
 # Virtual environments
-.venv
+.venv/
+.venv*/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+
+# Tool caches
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.cache/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Generated outputs (keep images)
+outputs/**
+!outputs/**/
+!outputs/**/*.png
+!outputs/**/*.jpg
+!outputs/**/*.jpeg
+!outputs/**/*.svg
+!outputs/**/*.pdf
