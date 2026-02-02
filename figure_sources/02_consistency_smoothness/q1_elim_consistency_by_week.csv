@@ -1,0 +1,262 @@
+﻿season,week,n_active,n_elim,actual_elim,pred_elim,consistent
+1,2,6,1,Trista Sutter,Trista Sutter,1
+1,3,5,1,Evander Holyfield,Evander Holyfield,1
+1,4,4,1,Rachel Hunter,Rachel Hunter,1
+1,5,3,1,Joey McIntyre,Joey McIntyre,1
+2,1,10,1,Kenny Mayne,Kenny Mayne,1
+2,2,9,1,Tatum O'Neal,Tatum O'Neal,1
+2,3,8,1,Giselle Fernandez,Giselle Fernandez,1
+2,4,7,1,Master P,Master P,1
+2,5,6,1,Tia Carrere,Tia Carrere,1
+2,6,5,1,George Hamilton,George Hamilton,1
+2,7,4,1,Lisa Rinna,Lisa Rinna,1
+3,1,11,1,Tucker Carlson,Tucker Carlson,1
+3,2,10,1,Shanna Moakler,Shanna Moakler,1
+3,3,9,1,Harry Hamlin,Harry Hamlin,1
+3,4,8,1,Vivica A. Fox,Vivica A. Fox,1
+3,5,7,2,Willa Ford | Sara Evans,Sara Evans | Willa Ford,1
+3,7,5,1,Jerry Springer,Jerry Springer,1
+3,8,4,1,Monique Coleman,Monique Coleman,1
+3,9,3,1,Joey Lawrence,Joey Lawrence,1
+4,2,11,1,Paulina Porizkova,Paulina Porizkova,1
+4,3,10,1,Shandi Finnessey,Shandi Finnessey,1
+4,4,9,1,Leeza Gibbons,Leeza Gibbons,1
+4,5,8,1,Clyde Drexler,Clyde Drexler,1
+4,6,7,1,Heather Mills,Heather Mills,1
+4,7,6,1,John Ratzenberger,John Ratzenberger,1
+4,8,5,1,Billy Ray Cyrus,Billy Ray Cyrus,1
+4,9,4,1,Ian Ziering,Ian Ziering,1
+5,1,12,1,Josie Maran,Josie Maran,1
+5,2,11,1,Albert Reed,Albert Reed,1
+5,3,10,1,Wayne Newton,Wayne Newton,1
+5,4,9,1,Floyd Mayweather Jr. ,Floyd Mayweather Jr. ,1
+5,5,8,1,Mark Cuban,Mark Cuban,1
+5,6,7,1,Sabrina Bryan,Sabrina Bryan,1
+5,7,6,1,Jane Seymour,Jane Seymour,1
+5,8,5,1,Cameron Mathison,Cameron Mathison,1
+5,9,4,1,Jennie Garth,Jennie Garth,1
+6,2,12,2,Monica Seles | Penn Jillette,Monica Seles | Penn Jillette,1
+6,3,10,1,Steve Guttenberg,Steve Guttenberg,1
+6,4,9,1,Adam Carolla,Adam Carolla,1
+6,5,8,1,Priscilla Presley,Priscilla Presley,1
+6,6,7,1,Marlee Matlin,Marlee Matlin,1
+6,7,6,1,Shannon Elizabeth,Shannon Elizabeth,1
+6,8,5,1,Mario,Mario,1
+6,9,4,1,Marissa Jaret Winokur,Marissa Jaret Winokur,1
+7,1,13,2,Ted McGinley | Jeffrey Ross,Jeffrey Ross | Ted McGinley,1
+7,2,11,2,Misty May-Treanor | Kim Kardashian,Kim Kardashian | Misty May-Treanor,1
+7,4,9,1,Rocco DiSpirito,Rocco DiSpirito,1
+7,5,8,1,Toni Braxton,Toni Braxton,1
+7,6,7,1,Cloris Leachman,Cloris Leachman,1
+7,7,6,1,Susan Lucci,Susan Lucci,1
+7,8,5,1,Maurice Greene,Maurice Greene,1
+7,9,4,1,Cody Linley,Cody Linley,1
+8,2,13,1,Belinda Carlisle,Belinda Carlisle,1
+8,3,12,1,Denise Richards,Denise Richards,1
+8,4,11,2,Steve Wozniak | Holly Madison,Steve Wozniak | Holly Madison,1
+8,5,9,1,David Alan Grier,David Alan Grier,1
+8,6,8,1,Steve-O,Steve-O,1
+8,7,7,1,Lawrence Taylor,Lawrence Taylor,1
+8,8,6,1,Chuck Wicks,Chuck Wicks,1
+8,9,5,1,Lil' Kim,Lil' Kim,1
+8,10,4,1,Ty Murray,Ty Murray,1
+9,1,16,2,Ashley Hamiliton | Macy Gray,Macy Gray | Ashley Hamiliton,1
+9,2,14,1,Kathy Ireland,Kathy Ireland,1
+9,3,13,2,Debi Mazar | Tom DeLay,Tom DeLay | Debi Mazar,1
+9,4,11,1,Chuck Liddell,Chuck Liddell,1
+9,5,10,1,Natalie Coughlin,Natalie Coughlin,1
+9,6,9,2,Melissa Joan Hart | Louie Vito,Melissa Joan Hart | Louie Vito,1
+9,7,7,2,Mark Dacascos | Michael Irvin,Mark Dacascos | Michael Irvin,1
+9,8,5,1,Aaron Carter,Aaron Carter,1
+9,9,4,1,Joanna Krupa,Joanna Krupa,1
+10,2,11,1,Shannen Doherty,Shannen Doherty,1
+10,3,10,1,Buzz Aldrin,Buzz Aldrin,1
+10,4,9,1,Aiden Turner,Aiden Turner,1
+10,5,8,1,Kate Gosselin,Kate Gosselin,1
+10,6,7,1,Jake Pavelka,Jake Pavelka,1
+10,7,6,1,Pamela Anderson,Pamela Anderson,1
+10,8,5,1,Niecy Nash,Niecy Nash,1
+10,9,4,1,Chad Ochocinco,Chad Ochocinco,1
+11,1,12,1,David Hasselhoff,David Hasselhoff,1
+11,2,11,1,Michael Bolton,Michael Bolton,1
+11,3,10,1,Margaret Cho,Margaret Cho,1
+11,4,9,1,The Situation,The Situation,1
+11,5,8,1,Florence Henderson,Florence Henderson,1
+11,6,7,1,Audrina Patridge,Audrina Patridge,1
+11,7,6,1,Rick Fox,Rick Fox,1
+11,8,5,1,Kurt Warner,Kurt Warner,1
+11,9,4,1,Brandy,Brandy,1
+12,2,11,1,Mike Catherwood,Mike Catherwood,1
+12,3,10,1,Wendy Williams,Wendy Williams,1
+12,4,9,1,Sugar Ray Leonard,Sugar Ray Leonard,1
+12,5,8,1,Petra Nemcova,Petra Nemcova,1
+12,6,7,1,Chris Jericho,Chris Jericho,1
+12,7,6,1,Kendra Wilkinson,Kendra Wilkinson,1
+12,8,5,1,Romeo,Romeo,1
+12,9,4,1,Ralph Macchio,Ralph Macchio,1
+13,1,12,1,Metta World Peace (Ron),Metta World Peace (Ron),1
+13,2,11,1,Elisabetta Canalis,Elisabetta Canalis,1
+13,3,10,1,Kristin Cavallari,Kristin Cavallari,1
+13,4,9,1,Chynna Phillips,Chynna Phillips,1
+13,5,8,1,Carson Kressley,Carson Kressley,1
+13,6,7,1,Chaz Bono,Chaz Bono,1
+13,7,6,1,David Arquette,David Arquette,1
+13,8,5,1,Nancy Grace,Nancy Grace,1
+13,9,4,1,Hope Solo,Hope Solo,1
+14,2,12,1,Martina Navratilova,Martina Navratilova,1
+14,3,11,1,Jack Wagner,Jack Wagner,1
+14,4,10,1,Sherri Sheperd,Sherri Sheperd,1
+14,5,9,1,Gavin DeGraw,Gavin DeGraw,1
+14,6,8,1,Gladys Knight,Gladys Knight,1
+14,7,7,1,Jaleel White,Jaleel White,1
+14,8,6,2,Roshon Fegan | Melissa Gilbert,Melissa Gilbert | Roshon Fegan,1
+14,9,4,1,Maria Menounos,Maria Menounos,1
+15,1,13,1,Pamela Anderson,Pamela Anderson,1
+15,2,12,1,Joey Fatone,Joey Fatone,1
+15,3,11,2,Helio Castroneves | Drew Lachey,Drew Lachey | Helio Castroneves,1
+15,4,9,1,Bristol Palin,Bristol Palin,1
+15,6,8,1,Sabrina Bryan,Sabrina Bryan,1
+15,8,7,2,Gilles Marini | Kirstie Alley,Kirstie Alley | Gilles Marini,1
+15,9,5,2,Apolo Anton Ohno | Emmitt Smith,Emmitt Smith | Apolo Anton Ohno,1
+16,2,12,1,Dorothy Hamill,Dorothy Hamill,1
+16,3,11,1,Wynonna Judd,Wynonna Judd,1
+16,4,10,1,Lisa Vanderpump,Lisa Vanderpump,1
+16,5,9,1,D. L. Hughley,D. L. Hughley,1
+16,6,8,1,Victor Ortiz,Victor Ortiz,1
+16,7,7,1,Andy Dick,Andy Dick,1
+16,8,6,1,Sean Lowe,Sean Lowe,1
+16,9,5,1,Ingo Rademacher,Ingo Rademacher,1
+17,2,12,1,Keyshawn Johnson,Keyshawn Johnson,1
+17,3,11,1,Bill Nye,Bill Nye,1
+17,4,10,1,Valerie Harper,Valerie Harper,1
+17,5,9,1,Christina Milian,Christina Milian,1
+17,7,8,1,"Nicole ""Snooki"" Polizzi","Nicole ""Snooki"" Polizzi",1
+17,8,7,1,Brant Daugherty,Brant Daugherty,1
+17,9,6,1,Elizabeth Berkley Lauren,Elizabeth Berkley Lauren,1
+17,10,5,1,Leah Remini,Leah Remini,1
+18,1,12,1,Diana Nyad,Diana Nyad,1
+18,2,11,2,Billy Dee Williams | Sean Avery,Billy Dee Williams | Sean Avery,1
+18,5,9,1,Cody Simpson,Cody Simpson,1
+18,6,8,1,Drew Carey,Drew Carey,1
+18,7,7,1,NeNe Leakes,NeNe Leakes,1
+18,8,6,1,Danica McKellar,Danica McKellar,1
+18,9,5,1,Charlie White,Charlie White,1
+19,1,13,1,Lolo Jones,Lolo Jones,1
+19,2,12,1,Tavis Smiley,Tavis Smiley,1
+19,3,11,1,Randy Couture,Randy Couture,1
+19,4,10,1,Betsey Johnson,Betsey Johnson,1
+19,6,9,1,Jonathan Bennett,Jonathan Bennett,1
+19,7,8,1,Antonio Sabato Jr.,Antonio Sabato Jr.,1
+19,8,7,1,Michael Waltrip,Michael Waltrip,1
+19,9,6,1,Lea Thompson,Lea Thompson,1
+19,10,5,1,Tommy Chong,Tommy Chong,1
+20,2,12,1,Redfoo,Redfoo,1
+20,3,11,1,Charlotte McKinney,Charlotte McKinney,1
+20,4,10,1,Michael Sam,Michael Sam,1
+20,5,9,1,Suzanne Somers,Suzanne Somers,1
+20,6,8,1,Patti LaBelle,Patti LaBelle,1
+20,7,7,1,Willow Shields,Willow Shields,1
+20,8,6,2,Robert Herjavec | Chris Soules,Robert Herjavec | Chris Soules,1
+20,9,4,1,Nastia Liukin,Nastia Liukin,1
+21,2,13,3,Victor Espinoza | Chaka Khan | Kim Zolciak-Biermann,Chaka Khan | Kim Zolciak-Biermann | Victor Espinoza,1
+21,4,10,1,Gary Busey,Gary Busey,1
+21,6,9,1,Paula Deen,Paula Deen,1
+21,7,8,1,Hayes Grier,Hayes Grier,1
+21,8,7,1,Andy Grammer,Andy Grammer,1
+21,9,6,2,Alexa PenaVega | Tamar Braxton,Tamar Braxton | Alexa PenaVega,1
+22,2,12,1,Geraldo Rivera,Geraldo Rivera,1
+22,3,11,1,Mischa Barton,Mischa Barton,1
+22,4,10,1,Marla Maples,Marla Maples,1
+22,6,9,1,Doug Flutie,Doug Flutie,1
+22,7,8,2,Kim Fields | Von Miller,Von Miller | Kim Fields,1
+22,8,6,1,Jodie Sweetin,Jodie Sweetin,1
+22,9,5,2,Antonio Brown | Wanya Morris,Antonio Brown | Wanya Morris,1
+23,2,13,1,Jake T. Austin,Jake T. Austin,1
+23,3,12,1,Rick Perry,Rick Perry,1
+23,4,11,2,Babyface | Vanilla Ice,Babyface | Vanilla Ice,1
+23,6,9,1,Amber Rose,Amber Rose,1
+23,7,8,1,Maureen McCormick,Maureen McCormick,1
+23,8,7,1,Ryan Lochte,Ryan Lochte,1
+23,9,6,1,Marilu Henner,Marilu Henner,1
+23,10,5,1,Terra Jole,Terra Jole,1
+24,2,12,1,Chris Kattan,Chris Kattan,1
+24,3,11,1,Charo,Charo,1
+24,4,10,1,Mr. T,Mr. T,1
+24,5,9,1,Erika Jayne,Erika Jayne,1
+24,6,8,1,Heather Morris,Heather Morris,1
+24,7,7,2,Nancy Kerrigan | Nick Viall,Nick Viall | Nancy Kerrigan,1
+24,8,5,1,Bonner Bolton,Bonner Bolton,1
+24,9,4,1,Simone Biles,Simone Biles,1
+25,2,13,2,Barbara Corcoran | Debbie Gibson,Barbara Corcoran | Debbie Gibson,1
+25,4,11,1,Derek Fisher,Derek Fisher,1
+25,5,10,1,Sasha Pieterse,Sasha Pieterse,1
+25,6,9,1,Nick Lachey,Nick Lachey,1
+25,7,8,2,Nikki Bella | Vanessa Lachey,Nikki Bella | Vanessa Lachey,1
+25,8,6,1,Terrell Owens,Terrell Owens,1
+25,9,5,1,Victoria Arlen,Victoria Arlen,1
+26,1,10,2,Jamie Anderson | Johnny Damon,Johnny Damon | Jamie Anderson,1
+26,2,8,2,Kareem Abdul-Jabbar | Arike Ogunbowale,Kareem Abdul-Jabbar | Arike Ogunbowale,1
+26,3,6,3,Jennie Finch Daigle | Chris Mazdzer | Mirai Nagasu,Jennie Finch Daigle | Chris Mazdzer | Mirai Nagasu,1
+27,1,13,1,Nikki Glaser,Nikki Glaser,1
+27,2,12,1,Danelle Umstead,Danelle Umstead,1
+27,3,11,1,Nancy McKeon,Nancy McKeon,1
+27,4,10,1,Tinashe,Tinashe,1
+27,6,9,1,Mary Lou Retton,Mary Lou Retton,1
+27,7,8,2,John Schneider | DeMarcus Ware,DeMarcus Ware | John Schneider,1
+27,8,6,2,Juan Pablo Di Pace | Joe Amabile,Joe Amabile | Juan Pablo Di Pace,1
+28,2,12,2,Ray Lewis | Mary Wilson,Mary Wilson | Ray Lewis,1
+28,4,10,1,Lamar Odom,Lamar Odom,1
+28,6,9,1,Sailor Brinkley-Cook,Sean Spicer,0
+28,7,8,1,Karamo Brown,Karamo Brown,1
+28,8,7,1,Kate Flannery,Sean Spicer,0
+28,9,6,1,Sean Spicer,Sean Spicer,1
+28,10,5,1,James Van Der Beek,James Van Der Beek,1
+29,2,15,1,Charles Oakley,Charles Oakley,1
+29,3,14,1,Carole Baskin,Carole Baskin,1
+29,4,13,1,Anne Heche,Anne Heche,1
+29,5,12,1,Jesse Metcalfe,Jesse Metcalfe,1
+29,6,11,1,Veron Davis,Veron Davis,1
+29,7,10,2,Monica Aldama | Jeannie Mai,Monica Aldama | Jeannie Mai,1
+29,8,8,1,Chrishell Stause,Nelly,0
+29,9,7,1,AJ McLean,AJ McLean,1
+29,10,6,2,Skai Jackson | Johnny Weir,Johnny Weir | Skai Jackson,1
+30,2,15,1,Martin Kove,Martin Kove,1
+30,3,14,1,Christine Chiu,Christine Chiu,1
+30,4,13,2,Brian Austin Green | Matt James,Brian Austin Green | Matt James,1
+30,5,11,1,Melanie C,Melanie C,1
+30,6,10,1,Kenya Moore,Kenya Moore,1
+30,7,9,1,"Mike ""The Miz"" Mizanin","Mike ""The Miz"" Mizanin",1
+30,8,8,2,Jimmie Allen | Olivia Jade,Jimmie Allen | Olivia Jade,1
+30,9,6,2,Melora Hardin | Suni Lee,Melora Hardin | Suni Lee,1
+31,1,16,1,Jason Lewis,Jason Lewis,1
+31,2,15,1,Teresa Giudice,Teresa Giudice,1
+31,3,14,1,Cheryl Ladd,Cheryl Ladd,1
+31,4,13,1,Sam Champion,Sam Champion,1
+31,5,12,2,Selma Blair | Joseph Baena,Joseph Baena | Selma Blair,1
+31,6,10,1,Jessie James Decker,Jessie James Decker,1
+31,7,9,1,Jordin Sparks,Jordin Sparks,1
+31,8,8,2,Heidi D'Amelio | Vinny Guadagnino,Vinny Guadagnino | Heidi D'Amelio,1
+31,9,6,2,Trevor Donovan | Daniel Durant,Trevor Donovan | Daniel Durant,1
+32,1,14,1,Matt Walsh,Matt Walsh,1
+32,2,13,1,Jamie Lynn Spears,Jamie Lynn Spears,1
+32,3,12,1,Tyson Beckford,Tyson Beckford,1
+32,4,11,1,Adrian Peterson,Adrian Peterson,1
+32,5,10,1,Mira Sorvino,Harry Jowsey,0
+32,6,9,1,Mauricio Umansky,Mauricio Umansky,1
+32,7,8,1,Lele Pons,Lele Pons,1
+32,8,7,1,Barry Williams,Harry Jowsey,0
+32,9,6,1,Harry Jowsey,Harry Jowsey,1
+33,2,13,2,Tori Spelling | Anna Delvey,Anna Delvey | Tori Spelling,1
+33,3,11,2,Eric Roberts | Reginald VelJohnson,Reginald VelJohnson | Eric Roberts,1
+33,4,9,1,Brooks Nader,Brooks Nader,1
+33,5,8,1,Phaedra Parks,Phaedra Parks,1
+33,6,7,1,Jenn Tran,Ilona Maher,0
+33,7,6,1,Dwight Howard ,Dwight Howard ,1
+34,2,14,2,Corey Feldman | Baron Davis,Corey Feldman | Baron Davis,1
+34,3,12,1,Lauren Jauregui,Lauren Jauregui,1
+34,4,11,1,Hilaria Baldwin,Hilaria Baldwin,1
+34,6,10,1,Scott Hoying,Scott Hoying,1
+34,7,9,1,Jen Affleck,Jen Affleck,1
+34,8,8,1,Danielle Fishel,Danielle Fishel,1
+34,9,7,1,Andy Richter,Andy Richter,1
+34,10,6,1,Whitney Leavitt,Whitney Leavitt,1
