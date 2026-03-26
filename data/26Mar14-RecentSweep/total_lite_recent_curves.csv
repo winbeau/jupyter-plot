@@ -1,0 +1,19 @@
+family,recent_frames,method_label,total_lite_score_mean,total_lite_score_std
+sta_minus,1,Sta Minus R1,79.512,3.034
+sta_minus,3,Sta Minus R3,80.249,3.428
+sta_minus,5,Sta Minus R5,80.918,3.344
+sta_minus,10,Sta Minus R10,80.674,3.606
+sta_minus,15,Sta Minus R15,80.747,3.679
+sta_minus,20,Sta Minus R20,80.740,3.708
+sta_plus,1,Sta Plus R1,77.938,3.639
+sta_plus,3,Sta Plus R3,79.719,4.486
+sta_plus,5,Sta Plus R5,80.444,4.061
+sta_plus,10,Sta Plus R10,80.665,3.970
+sta_plus,15,Sta Plus R15,80.845,3.810
+sta_plus,20,Sta Plus R20,80.759,3.735
+osc,1,Osc R1,77.407,2.809
+osc,3,Osc R3,79.589,3.639
+osc,5,Osc R5,80.712,3.458
+osc,10,Osc R10,81.053,3.540
+osc,15,Osc R15,80.919,3.336
+osc,20,Osc R20,80.714,3.718
