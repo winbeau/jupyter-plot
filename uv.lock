@@ -944,6 +944,7 @@ dependencies = [
     { name = "scikit-learn" },
     { name = "seaborn" },
     { name = "torch" },
+    { name = "tqdm" },
 ]
 
 [package.metadata]
@@ -957,6 +958,7 @@ requires-dist = [
     { name = "scikit-learn", specifier = ">=1.8.0" },
     { name = "seaborn", specifier = ">=0.13.2" },
     { name = "torch", specifier = ">=2.10.0" },
+    { name = "tqdm", specifier = ">=4.67.3" },
 ]
 
 [[package]]
