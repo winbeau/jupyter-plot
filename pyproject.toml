@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "huggingface-hub>=1.1.5",
     "jupyter>=1.1.1",
     "matplotlib>=3.10.8",
     "mplfonts>=0.0.10",
