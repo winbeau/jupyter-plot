@@ -34,3 +34,14 @@ outputs/**
 !outputs/**/*.jpeg
 !outputs/**/*.svg
 !outputs/**/*.pdf
+
+# Large experiment inputs and regenerable artifacts
+data/**/*.mp4
+data/**/*.pt
+data/**/*.zip
+figures/**/frames/
+figures/**/sheet_*.png
+figures/**/sheet_overview.png
+figures/**/frame_export_summary.csv
+figures/**/*.csv
+figures/**/*.done
