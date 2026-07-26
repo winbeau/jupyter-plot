@@ -212,6 +212,44 @@ uv run python notebooks/26Jul26-PromptSets-attention/plot_all_layer_heatmaps.py 
 
 只统计因果下三角：上三角是未来帧，恒为结构性 0，算进分位数会把中位数往 0 拽。
 
+---
+
+# 提取性能
+
+全部实测于空闲的 H200 NVL（GPU 4），同 prompt 同 seed，72 潜帧：
+
+| 配置 | 提取耗时 |
+| --- | --- |
+| pooled，1 层 | 33.6 s |
+| **pooled，30 层** | **33.5 s** |
+| chunked，1 层 | 36.6 s |
+| chunked，30 层 | 114.0 s |
+
+另有 wall 179.2 s − 提取 114.0 s ⇒ **单进程启动约 65 s**（uv + import + 加载
+5.6 GB checkpoint + 建模型）。
+
+生产跑：406 个 prompt × 30 层，5 张卡，**51 分钟**（02:48:32 → 03:39:50）。
+
+## 快在哪，按贡献排序
+
+**① 一次推理抓 30 层，而不是每层重跑一遍。** 这是主因。前身
+`AdaHead/experiments/extract_attn/script_extract_frames72_l0_l29.sh` 是**每层一个
+独立进程**，同一个 prompt 的 24 block 自回归 rollout 要完整跑 30 遍、checkpoint
+重新加载 30 次。按实测 65 s 启动 + 33.6 s 推理，单卡 30 层 ≈ **49 分钟/prompt**。
+
+**② pooled 取代 chunked：实测 3.4×。** 30 层 114.0 s → 33.6 s。逐层看 chunked
+每层加 3.0 s、pooled 加约 0；捕获成本 114.0 − 33.6 = 80.4 s 被压到接近 0，剩下
+全是 DiT+VAE —— 这就是为什么抓 30 层和抓 1 层一样快。
+
+**③ 丢掉 block 内 4/5 的重复捕获。** 这条是**从代码路径推的，不是实测**：
+Self-Forcing 每个 block 跑 4 次加噪 + 1 次 clean forward，`(q_frames, k_frames)`
+完全相同，旧代码 5 次全算完再由聚合器扔掉 4 次。据此旧 chunked 的捕获成本应是
+80.4 × 5 ≈ 402 s，30 层合计约 436 s/prompt。
+
+顺带：AdaHead 脚本里那一大段显存估算和 `--force` 开关（注释写「60 帧运行时
+30 GB、保存峰值 36 GB」）是被 chunked 每次物化 `[12, 1560, 4680]` fp32 分数块
+（单块 350 MB）逼出来的。pooled 的中间量只有 KB 级，那套估算和警告不再需要。
+
 ## 没做的对比
 
 MovieGen-256 那批的 homology CSV **不在本地** —— `figures/**/*.csv` 被 gitignore，
