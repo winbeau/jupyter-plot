@@ -1,0 +1,17 @@
+index,run,prompt_index,seed,prompt
+0,run_000,0,42,a person jumps from building
+1,run_001,0,43,a person jumps from building
+2,run_002,0,44,a person jumps from building
+3,run_003,0,45,a person jumps from building
+4,run_004,16,42,close up of a businessman man controlling a futuristic computer system using his eye.
+5,run_005,16,43,close up of a businessman man controlling a futuristic computer system using his eye.
+6,run_006,16,44,close up of a businessman man controlling a futuristic computer system using his eye.
+7,run_007,16,45,close up of a businessman man controlling a futuristic computer system using his eye.
+8,run_008,32,42,a white shirt man is doing experiments on the table
+9,run_009,32,43,a white shirt man is doing experiments on the table
+10,run_010,32,44,a white shirt man is doing experiments on the table
+11,run_011,32,45,a white shirt man is doing experiments on the table
+12,run_012,48,42,Realistic dry ice smoke clouds.
+13,run_013,48,43,Realistic dry ice smoke clouds.
+14,run_014,48,44,Realistic dry ice smoke clouds.
+15,run_015,48,45,Realistic dry ice smoke clouds.
