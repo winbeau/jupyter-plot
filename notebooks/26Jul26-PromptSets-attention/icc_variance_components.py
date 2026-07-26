@@ -113,22 +113,66 @@ def load_layer(run_dirs, layer, mask, target="full"):
     return np.stack(stack, axis=0)
 
 
-def compute_condition(root, num_layers=NUM_LAYERS, max_runs=None, target="full"):
+def group_runs_by_prompt(run_dirs):
+    """按 .pt 里存的 prompt 文本分组，返回 [(prompt, [run 下标...]), ...]。
+
+    不依赖 run 目录的编号顺序：编号是分片产物，分组必须看内容。
+    """
+    labels = []
+    for d in run_dirs:
+        payload = torch.load(d / "layer0.pt", map_location="cpu", weights_only=False)
+        labels.append(payload["prompt"])
+    groups = {}
+    for i, lab in enumerate(labels):
+        groups.setdefault(lab, []).append(i)
+    sizes = {len(v) for v in groups.values()}
+    if len(sizes) != 1:
+        raise ValueError(f"unbalanced groups {sorted(sizes)}; the crossed design requires equal sizes")
+    return list(groups.items())
+
+
+def compute_condition(root, num_layers=NUM_LAYERS, max_runs=None, target="full",
+                      group_by_prompt=False):
+    """group_by_prompt=True 时按 prompt 分组，组内只有 seed 在变。
+
+    这是嵌套设计的正确算法：把 4 prompt x 4 seed 的 16 个 run 当成 16 次独立重复
+    会把 prompt 主效应算进误差项，得到的根本不是 sigma^2_seed。分组后每组给一个
+    ICC，再用组间平均的均方合成池化估计（自由度是单组的 G 倍）。
+    """
     mask = causal_mask()
     dirs = run_dirs_of(root, max_runs)
+    groups = group_runs_by_prompt(dirs) if group_by_prompt else [(None, list(range(len(dirs))))]
+    n_per_group = len(groups[0][1])
+
     icc = np.full((num_layers, NUM_HEADS), np.nan)
     var_t = np.full((num_layers, NUM_HEADS), np.nan)
     var_e = np.full((num_layers, NUM_HEADS), np.nan)
+    per_group_icc = np.full((len(groups), num_layers, NUM_HEADS), np.nan)
+
     for layer in range(num_layers):
         block = load_layer(dirs, layer, mask, target)   # [N, H, M]
         for head in range(NUM_HEADS):
-            icc[layer, head], _, _, var_t[layer, head], var_e[layer, head] = icc1_from_matrix(
-                block[:, head, :]
-            )
+            msb_acc, msw_acc = [], []
+            for g, (_, idx) in enumerate(groups):
+                g_icc, msb, msw, _, _ = icc1_from_matrix(block[idx, head, :])
+                per_group_icc[g, layer, head] = g_icc
+                msb_acc.append(msb)
+                msw_acc.append(msw)
+            msb, msw = float(np.mean(msb_acc)), float(np.mean(msw_acc))
+            denom = msb + (n_per_group - 1) * msw
+            icc[layer, head] = float(np.clip((msb - msw) / denom, 0.0, 1.0)) if denom > 0 else 0.0
+            var_e[layer, head] = msw
+            var_t[layer, head] = max((msb - msw) / n_per_group, 0.0)
         if layer % 10 == 0:
             print(f"  layer {layer:2d}/{num_layers}  ICC median so far "
                   f"{np.nanmedian(icc[:layer + 1]):.4f}")
-    return {"n_runs": len(dirs), "icc": icc, "var_target": var_t, "var_error": var_e}
+
+    out = {"n_runs": len(dirs), "icc": icc, "var_target": var_t, "var_error": var_e,
+           "n_groups": len(groups), "n_per_group": n_per_group}
+    if group_by_prompt:
+        out["per_group_icc"] = per_group_icc
+        out["group_labels"] = [lab for lab, _ in groups]
+    return out
 
 
 def selftest():
@@ -159,8 +203,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--cond", action="append", default=[],
-                        help="NAME=PATH[@N]，可重复。@N 只取前 N 个 run，用来把条件之间的 "
-                             "prompt 集合配平（例如 A=.../fetv128@64 与 C 用同样的 prompt 0-63）")
+                        help="NAME=PATH[@N]，可重复。@N 只取前 N 个 run；名字后加 ! 表示按 "
+                             "prompt 分组做嵌套估计（交叉设计必须用，例如 B! ）")
     parser.add_argument("--out-dir", type=Path,
                         default=Path("data/26Jul26-PromptSets-attention"))
     parser.add_argument("--num-layers", type=int, default=NUM_LAYERS)
@@ -182,16 +226,27 @@ def main():
         if "=" not in spec:
             parser.error(f"--cond needs NAME=PATH, got {spec!r}")
         name, path = spec.split("=", 1)
+        grouped = name.endswith("!")
+        name = name.rstrip("!")
         max_runs = None
         if "@" in path:
             path, n_str = path.rsplit("@", 1)
             max_runs = int(n_str)
         print(f"=== condition {name}: {path}" + (f" (first {max_runs} runs)" if max_runs else "") + " ===")
-        results[name] = compute_condition(path, args.num_layers, max_runs, args.target)
+        results[name] = compute_condition(path, args.num_layers, max_runs, args.target, grouped)
         r = results[name]
         v = r["icc"].ravel()
-        print(f"  N={r['n_runs']} runs   ICC median {np.median(v):.4f}  "
-              f"mean {v.mean():.4f}  p5 {np.percentile(v, 5):.4f}  min {v.min():.4f}")
+        shape = (f"{r['n_groups']} groups x {r['n_per_group']} runs (pooled within group)"
+                 if r.get("per_group_icc") is not None else f"{r['n_runs']} runs")
+        print(f"  N={r['n_runs']}  {shape}")
+        print(f"  ICC median {np.median(v):.4f}  mean {v.mean():.4f}  "
+              f"p5 {np.percentile(v, 5):.4f}  min {v.min():.4f}")
+        if r.get("per_group_icc") is not None:
+            meds = [float(np.median(g)) for g in r["per_group_icc"]]
+            print("  per-group ICC medians: " + "  ".join(f"{m:.4f}" for m in meds)
+                  + f"   spread {max(meds) - min(meds):.4f}")
+            for lab, m in zip(r["group_labels"], meds):
+                print(f"      {m:.4f}  {lab[:58]}")
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
     out_csv = args.out_dir / f"icc_variance_components_{args.target}.csv"
