@@ -168,6 +168,50 @@ FFT 跑在 68 点的一阶差分序列上，所以周期取值只能是 `68/k`�
 的 Wave 头用别的周期振荡，或者根本不靠周期性被划进去。要把这张表写进论文，得先确认
 `best_labels.csv` 当初是怎么定的标签。
 
+---
+
+# 全层热力图（两阶段流程的第二阶段）
+
+提取（`Pyramid-Forcing-Preview/experiments/extract_attn/run_extraction_streaming.py`）
+和绘图是分开的，绘图脚本只认 `<root>/run_%03d/layer<L>.pt` 这个布局，换 prompt /
+换模型 / 换集合都不用改代码：
+
+```bash
+uv run python notebooks/26Jul26-PromptSets-attention/plot_all_layer_heatmaps.py \
+    --run-dir data/26Jul26-PromptSets-attention/fetv128/run_000 \
+    --run-dir data/26Jul26-PromptSets-attention/step128/run_000 \
+    --run-dir data/26Jul26-PromptSets-attention/chronomagic150/run_000 \
+    --out-root figures/26Jul26-PromptSets-attention
+```
+
+渲染器直接复用 `26Mar26-PyramidForcing-frames72/attention_plot_utils.py` 的
+`render_attention_heatmaps` —— 就是 `26Jul26-CausalRCM-attention/layer15_2d_heatmap_all_heads.png`
+那张图的渲染器，只换配色范围。产物：三个集合 × 30 层 = **90 张**，每张是一层的
+12 个头（3×4 三角热力图），PNG + PDF，共约 32 MB，落在
+`figures/26Jul26-PromptSets-attention/<set>_run000/layer<L>_2d_heatmap_all_heads.{png,pdf}`。
+
+当前用的是各集合的 `run_000`（单 prompt，与参考图同性质）。跨 prompt 的均值 /
+方差分布是后续工作，脚本已经按可复用的方式写好，届时只换 `--run-dir` 即可。
+
+## 配色范围：两个都踩过的坑
+
+`--color-range auto` 取的是**池化后全部因果下三角值**的 p1/p99，本批数据是
+**[-15.33, 13.95]**。这个数不是随便定的，两个更朴素的做法都会翻车：
+
+1. **朴素全局 min/max** 给出 `[-36.0, 100.6]`。但 `|v| > 20` 只占 **1.26%**，而且
+   几乎全来自 layer 28/29 —— 用它定色标会把 98% 的数据压进色标中段，图基本全白。
+   （保留为 `--color-range minmax`，仅供复现这个失败模式。）
+2. **逐层取 p1 的最小值 / p99 的最大值** 给出 `[-28.8, 68.7]`，看着像分位数其实
+   等于又把 layer28/29 那两个极端层挑了出来，离群问题原封不动。分位数**必须在
+   池化后的样本上取**。
+
+顺带纠正一个容易犯的错：本批 logits 的范围不是 `[-6.5, 11.1]` —— 那只是 **layer 0**
+的范围，深层大得多。p1/p99 落在 ±15 附近，说明参考图那个写死的 ±18 其实是贴合数据的，
+所以这批图与既有的 rCM / frames72 图仍可并排比较。要严格对齐既有图就传
+`--color-range fixed18`。
+
+只统计因果下三角：上三角是未来帧，恒为结构性 0，算进分位数会把中位数往 0 拽。
+
 ## 没做的对比
 
 MovieGen-256 那批的 homology CSV **不在本地** —— `figures/**/*.csv` 被 gitignore，
