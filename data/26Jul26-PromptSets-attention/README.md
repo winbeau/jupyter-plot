@@ -83,3 +83,93 @@ Wan2.1-T2V-1.3B + `self_forcing_dmd.pt` 的 EMA 权重，`seed=42`，噪声在�
 - **Step-128 全是中文**，上游没有英文版。Wan2.1 的 UMT5 text encoder 支持中文，
   能直接跑，但相对另外两个集合存在语种偏移。
 - **ChronoMagic-150 全是 "Time-lapse of …"** 的延时摄影描述，题材本身很窄。
+
+---
+
+# Head period homology 结果
+
+```bash
+uv run python notebooks/26Jul26-PromptSets-attention/run_head_period_homology.py
+```
+
+对三个集合各跑一遍 `spectral_analysis_utils.run_256prompts_distribution`（它对
+prompt 数是参数化的），判据全部沿用该模块既有常量，没有另立标准。产物：
+
+| 文件 | 内容 |
+| --- | --- |
+| `head_period_homology_<set>_firstdiff_folded_top1_0_68.csv` | 每集合 360 行（30 层 × 12 头）的 `period_mean/std/min/max/q25/q75/dominant` |
+| `head_period_homology_promptsets_merged.csv` | 三集合并排 + `is_cycle6` + `best_label` 对照 |
+| `../../figures/26Jul26-PromptSets-attention/*.png/pdf` | representative / uniform 两张紧凑图，每集合一组 |
+
+## 先记住一件事：周期是离散的
+
+FFT 跑在 68 点的一阶差分序列上，所以周期取值只能是 `68/k`。周期 6 附近的相邻格点
+是 **5.67 / 6.18 / 6.80** —— 分辨率约 0.6 帧。下面所有「Δ 小于 0.5 帧」「std=0」的
+说法都要放在这个网格上理解：`std=0` 意思是**所有 prompt 都投给了同一个 bin**，不是
+连续值恰好相等。
+
+## 1. 跨 prompt 分布高度一致
+
+`period_mean` 的相关性：
+
+| 对比 | r | \|Δ\| 中位 | ≤0.5 帧 | ≤1.0 帧 |
+| --- | --- | --- | --- | --- |
+| FETV-128 vs Step-128 | +0.989 | 0.087 | 307/360 (85%) | 346/360 (96%) |
+| FETV-128 vs ChronoMagic-150 | +0.977 | 0.127 | 276/360 (77%) | 321/360 (89%) |
+| Step-128 vs ChronoMagic-150 | +0.975 | 0.124 | 273/360 (76%) | 325/360 (90%) |
+
+三个集合的分布差异是很大的（英文短句 / 中文 / 英文延时摄影），|Δ| 中位数却只有
+0.09–0.13 帧，**远小于一个 FFT 格点**。也就是说周期结构不是 MovieGen prompt 分布的
+产物。
+
+## 2. 6-cycle 头集合：150 个铁核 + 22 个边界
+
+判据 `period_mean ∈ (5.8, 6.5)` 且 `period_std ≤ 1.5`（`CYCLE6_PERIOD_RANGE` /
+`CYCLE6_STD_MAX`）：
+
+| | 头数 |
+| --- | --- |
+| FETV-128 | 163 |
+| Step-128 | 163 |
+| ChronoMagic-150 | 159 |
+| **三集合交集** | **150** |
+| 三集合并集 | 172 |
+| Jaccard | 0.872 |
+
+两两 Jaccard 0.894–0.928。
+
+**最强的那个数字**：那 150 个交集头，跨三个集合取 `period_std` 最大值，中位数是
+**0.000** —— 超过一半的核心头在全部 406 个 prompt 上投出的都是同一个 FFT bin。
+对比之下 22 个边界头的同一指标中位是 **1.753**。分布是双峰的，不是连续退化。
+
+## 3. 阈值不脆
+
+扫 `std_max`，三集合 Jaccard：
+
+| std_max | 0.5 | 0.8 | 1.0 | 1.2 | **1.5** | 2.0 | 2.5 | ∞ |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Jaccard | 0.832 | 0.835 | 0.867 | 0.874 | **0.872** | 0.876 | 0.872 | 0.788 |
+
+0.5→2.5 之间只在 0.83–0.88 波动，现用的 1.5 不在悬崖边上。但**完全丢掉 std 条件会掉到
+0.788** —— 说明 `period_std` 这一项确实在挡掉一批不稳的头，值得保留。
+
+## 4. 与 `best_labels.csv` 的对照
+
+| set | 6-cycle ∩ Wave | Wave 召回 | 6-cycle 精度 |
+| --- | --- | --- | --- |
+| FETV-128 | 118 | 75.6% | 72.4% |
+| Step-128 | 121 | 77.6% | 74.2% |
+| ChronoMagic-150 | 115 | 73.7% | 72.3% |
+
+（`best_labels.csv`：Anchor 172 / Wave 156 / Veil 32。）
+
+**这不是准确率。** 6-cycle 只是 Wave 的一个充分不必要表征 —— Wave 的定义是注意力随
+时间振荡，并不要求周期恰好落在 6 附近。三个集合的召回一致在 74–78%，说明约四分之一
+的 Wave 头用别的周期振荡，或者根本不靠周期性被划进去。要把这张表写进论文，得先确认
+`best_labels.csv` 当初是怎么定的标签。
+
+## 没做的对比
+
+MovieGen-256 那批的 homology CSV **不在本地** —— `figures/**/*.csv` 被 gitignore，
+当初只提交了 PDF/PNG，`data/26May4-PyramidForcing-multihead/prompts256` 的 `.pt` 也
+没有。所以本文档**没有**给出与 256-prompt 基线的数值对比。要补的话需要先重跑那批提取。
