@@ -79,33 +79,48 @@ def causal_mask(num_frames=NUM_FRAMES):
     return np.tril(np.ones((num_frames, num_frames), dtype=bool))
 
 
-def run_dirs_of(root):
+def run_dirs_of(root, max_runs=None):
     dirs = sorted(p for p in Path(root).glob("run_*") if p.is_dir())
     if not dirs:
         raise FileNotFoundError(f"no run_* directories under {root}")
+    if max_runs is not None:
+        if len(dirs) < max_runs:
+            raise ValueError(f"{root} has only {len(dirs)} runs, asked for {max_runs}")
+        dirs = dirs[:max_runs]
     return dirs
 
 
-def load_layer(run_dirs, layer, mask):
-    """返回 [N, H, M] float32：N 次运行、H 个头、M 个因果 cell。"""
+def load_layer(run_dirs, layer, mask, target="full"):
+    """返回 [N, H, M] float32：N 次运行、H 个头、M 个 cell。
+
+    target='full'       72x72 因果下三角，M = 2628。整张图。
+    target='last_block' last_block_frame_attention 的 [0:69] 窗口，M = 69。
+                        这是**分类器真正读的量**：
+                        `spectral_analysis_utils.compute_head_period_homology_256`
+                        只取这条 1D 曲线做 FFT。全图 ICC 会把分类从不使用的 cell
+                        算进去，对决策而言是偏保守的代理。
+    """
     stack = []
     for d in run_dirs:
         path = d / f"layer{layer}.pt"
         if not path.exists():
             raise FileNotFoundError(f"{path} missing; {d} is an incomplete extraction")
-        full = torch.load(path, map_location="cpu", weights_only=False)["full_frame_attention"]
-        stack.append(full.float().numpy()[:, mask])
+        payload = torch.load(path, map_location="cpu", weights_only=False)
+        if target == "full":
+            stack.append(payload["full_frame_attention"].float().numpy()[:, mask])
+        else:
+            stack.append(payload["last_block_frame_attention"].float().numpy()[:, 0:69])
     return np.stack(stack, axis=0)
 
 
-def compute_condition(root, num_layers=NUM_LAYERS):
+def compute_condition(root, num_layers=NUM_LAYERS, max_runs=None, target="full"):
     mask = causal_mask()
-    dirs = run_dirs_of(root)
+    dirs = run_dirs_of(root, max_runs)
     icc = np.full((num_layers, NUM_HEADS), np.nan)
     var_t = np.full((num_layers, NUM_HEADS), np.nan)
     var_e = np.full((num_layers, NUM_HEADS), np.nan)
     for layer in range(num_layers):
-        block = load_layer(dirs, layer, mask)          # [N, H, M]
+        block = load_layer(dirs, layer, mask, target)   # [N, H, M]
         for head in range(NUM_HEADS):
             icc[layer, head], _, _, var_t[layer, head], var_e[layer, head] = icc1_from_matrix(
                 block[:, head, :]
@@ -144,12 +159,15 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--cond", action="append", default=[],
-                        help="NAME=PATH，可重复。例如 A=data/26Jul26-PromptSets-attention/fetv128")
+                        help="NAME=PATH[@N]，可重复。@N 只取前 N 个 run，用来把条件之间的 "
+                             "prompt 集合配平（例如 A=.../fetv128@64 与 C 用同样的 prompt 0-63）")
     parser.add_argument("--out-dir", type=Path,
                         default=Path("data/26Jul26-PromptSets-attention"))
     parser.add_argument("--num-layers", type=int, default=NUM_LAYERS)
     parser.add_argument("--delta", type=float, default=0.05,
                         help="H1 判据：ICC_A >= ICC_B - delta。跑之前定死，不许事后改")
+    parser.add_argument("--target", choices=["full", "last_block"], default="full",
+                        help="full = 72x72 因果下三角；last_block = 分类器实际读的 [12,69] 曲线")
     parser.add_argument("--selftest", action="store_true")
     args = parser.parse_args()
 
@@ -164,15 +182,19 @@ def main():
         if "=" not in spec:
             parser.error(f"--cond needs NAME=PATH, got {spec!r}")
         name, path = spec.split("=", 1)
-        print(f"=== condition {name}: {path} ===")
-        results[name] = compute_condition(path, args.num_layers)
+        max_runs = None
+        if "@" in path:
+            path, n_str = path.rsplit("@", 1)
+            max_runs = int(n_str)
+        print(f"=== condition {name}: {path}" + (f" (first {max_runs} runs)" if max_runs else "") + " ===")
+        results[name] = compute_condition(path, args.num_layers, max_runs, args.target)
         r = results[name]
         v = r["icc"].ravel()
         print(f"  N={r['n_runs']} runs   ICC median {np.median(v):.4f}  "
               f"mean {v.mean():.4f}  p5 {np.percentile(v, 5):.4f}  min {v.min():.4f}")
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
-    out_csv = args.out_dir / "icc_variance_components.csv"
+    out_csv = args.out_dir / f"icc_variance_components_{args.target}.csv"
     names = list(results)
     with out_csv.open("w", newline="") as handle:
         w = csv.writer(handle)
