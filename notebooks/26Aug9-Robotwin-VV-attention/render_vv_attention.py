@@ -32,6 +32,7 @@ from matplotlib.colors import Normalize
 import numpy as np
 
 WORKSET_NAME = "26Aug9-Robotwin-VV-attention"
+ATTENTION_PROBABILITY_VMAX = 1.0
 
 
 def apply_plot_style() -> None:
@@ -231,48 +232,9 @@ def load_head_matrix(
         raise ValueError(f"{path.name}: no finite values")
     if float(finite.min()) < 0.0:
         raise ValueError(f"{path.name}: negative attention probability")
+    if float(finite.max()) > ATTENTION_PROBABILITY_VMAX + 1e-5:
+        raise ValueError(f"{path.name}: attention probability exceeds 1")
     return matrix
-
-
-def estimate_shared_vmax(
-    matrix_dirs: Path | Sequence[Path],
-    expected_shape: tuple[int, int],
-    layers: Sequence[int],
-    heads: Sequence[int],
-    percentile: float = 99.5,
-    max_files: int = 24,
-) -> float:
-    matrix_dirs = [matrix_dirs] if isinstance(matrix_dirs, Path) else list(matrix_dirs)
-    specs = [
-        (matrix_dir, layer, head)
-        for matrix_dir in matrix_dirs
-        for layer in layers
-        for head in heads
-    ]
-    if not specs:
-        raise ValueError("No attention step/layer/head files selected")
-    positions = np.linspace(0, len(specs) - 1, min(max_files, len(specs)), dtype=int)
-    pooled = []
-    for position in sorted(set(positions.tolist())):
-        matrix_dir, layer, head = specs[position]
-        matrix = load_head_matrix(matrix_dir, expected_shape, layer, head)
-        stride = max(1, max(matrix.shape) // 256)
-        values = matrix[::stride, ::stride]
-        finite = values[np.isfinite(values)]
-        if finite.size:
-            pooled.append(finite)
-    if not pooled:
-        raise ValueError("Could not estimate a color scale")
-    values = np.concatenate(pooled)
-    vmax = float(np.percentile(values, percentile))
-    if not np.isfinite(vmax) or vmax <= 0.0:
-        vmax = float(values.max())
-    print(
-        f"color sample: {len(pooled)} files across {len(matrix_dirs)} step(s), "
-        f"{values.size:,} values, p{percentile:g}={vmax:.6g}, "
-        f"sampled max={float(values.max()):.6g}"
-    )
-    return vmax
 
 
 def sparse_ticks(length: int, maximum: int = 5) -> list[int]:
@@ -480,9 +442,7 @@ def render_experiment(
     heads: Sequence[int] | None = None,
     layer_grid: bool = False,
     formats: Sequence[str] = ("png", "pdf"),
-    color_vmax: float | None = None,
-    color_percentile: float = 99.5,
-    color_sample_files: int = 24,
+    color_vmax: float = ATTENTION_PROBABILITY_VMAX,
     dpi: int = 300,
 ) -> dict:
     experiment_dir, summary = locate_experiment(project_root, attention_link, experiment_slug)
@@ -495,9 +455,8 @@ def render_experiment(
     heads = resolve_selection(heads, range(num_heads))
     if not layers or not heads:
         raise ValueError("At least one layer and one head must be selected")
-    vmax = color_vmax or estimate_shared_vmax(
-        matrix_dir, shape, layers, heads, percentile=color_percentile, max_files=color_sample_files
-    )
+    vmax = float(color_vmax)
+    shared_probability_norm(vmax)
     figures_root = project_root / "figures" / WORKSET_NAME
     small_paths = []
     grid_paths = []
@@ -530,6 +489,7 @@ def render_experiment(
         "cmap": "RdBu_r",
         "colorbar_scope": "identical for every selected step, layer, and head",
         "color_center": "fixed linear midpoint",
+        "scale_source": "fixed attention probability range; no percentile clipping",
         "vmin": 0.0,
         "vcenter": vmax / 2.0,
         "vmax": vmax,
@@ -557,12 +517,10 @@ def render_attention_steps(
     heads: Sequence[int] | None = None,
     layer_grid: bool = False,
     formats: Sequence[str] = ("png", "pdf"),
-    color_vmax: float | None = None,
-    color_percentile: float = 99.5,
-    color_sample_files: int = 24,
+    color_vmax: float = ATTENTION_PROBABILITY_VMAX,
     dpi: int = 300,
 ) -> dict[str, dict]:
-    """Render selected steps with one shared color scale for direct comparison."""
+    """Render selected steps on the fixed attention-probability range [0, 1]."""
     experiment_dir, summary = locate_experiment(project_root, attention_link, experiment_slug)
     steps = resolve_attention_steps(attention_steps, discover_attention_steps(experiment_dir))
     shape, available_layers, num_heads, _, _ = metadata(experiment_dir, summary, steps[0])
@@ -572,15 +530,8 @@ def render_attention_steps(
             raise ValueError(f"Attention metadata differs across steps; mismatch at {step}")
     layers = resolve_selection(layers, available_layers)
     heads = resolve_selection(heads, range(num_heads))
-    matrix_dirs = [experiment_dir if step is None else experiment_dir / step for step in steps]
-    vmax = color_vmax or estimate_shared_vmax(
-        matrix_dirs,
-        shape,
-        layers,
-        heads,
-        percentile=color_percentile,
-        max_files=color_sample_files,
-    )
+    vmax = float(color_vmax)
+    shared_probability_norm(vmax)
 
     manifests = {}
     for step in steps:
@@ -596,8 +547,6 @@ def render_attention_steps(
             layer_grid=layer_grid,
             formats=formats,
             color_vmax=vmax,
-            color_percentile=color_percentile,
-            color_sample_files=color_sample_files,
             dpi=dpi,
         )
     return manifests
@@ -618,9 +567,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--head", type=int, action="append", default=None, help="Repeat for selected heads; default: all")
     parser.add_argument("--grid", action="store_true", help="Also render one 4x6 figure per selected layer")
     parser.add_argument("--formats", nargs="+", choices=("png", "pdf", "svg"), default=("png", "pdf"))
-    parser.add_argument("--vmax", type=float, default=None)
-    parser.add_argument("--percentile", type=float, default=99.5)
-    parser.add_argument("--sample-files", type=int, default=24)
+    parser.add_argument(
+        "--vmax",
+        type=float,
+        default=ATTENTION_PROBABILITY_VMAX,
+        help="Shared probability colorbar maximum; default: 1.0",
+    )
     parser.add_argument("--dpi", type=int, default=300)
     return parser.parse_args()
 
@@ -638,8 +590,6 @@ def main() -> int:
         layer_grid=args.grid,
         formats=args.formats,
         color_vmax=args.vmax,
-        color_percentile=args.percentile,
-        color_sample_files=args.sample_files,
         dpi=args.dpi,
     )
     return 0
