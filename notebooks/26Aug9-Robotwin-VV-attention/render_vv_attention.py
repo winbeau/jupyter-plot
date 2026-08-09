@@ -8,13 +8,14 @@ The CSV convention is:
 
 Examples from the jupyter-plot repository root:
 
-  # One small figure: layer 0, head 0
+  # One small figure from the first recorded step
   python3 notebooks/26Aug9-Robotwin-VV-attention/render_vv_attention.py \
+      --attention-link attn-exp-vv-10-3 --attention-step step_000 \
       --layer 0 --head 0 --formats png
 
-  # All 720 small figures plus one 4x6 figure for every layer
+  # Render every discovered step, all heads, and one 4x6 grid per layer
   python3 notebooks/26Aug9-Robotwin-VV-attention/render_vv_attention.py \
-      --grid --formats png pdf
+      --attention-link attn-exp-vv-10-3 --grid --formats png pdf
 """
 
 from __future__ import annotations
@@ -108,6 +109,56 @@ def locate_experiment(
     return experiment_dir, summary
 
 
+def discover_attention_steps(experiment_dir: Path) -> list[str]:
+    """Return sorted step directories, or an empty list for legacy flat outputs."""
+    step_dirs = sorted(path for path in experiment_dir.glob("step_*") if path.is_dir())
+    empty = [path.name for path in step_dirs if not any(path.glob("l??h??.csv"))]
+    if empty:
+        raise FileNotFoundError(f"Attention steps contain no layer/head CSVs: {empty}")
+    return [path.name for path in step_dirs]
+
+
+def resolve_attention_step(
+    experiment_dir: Path,
+    attention_step: str | None,
+) -> tuple[Path, str | None]:
+    """Resolve one matrix directory while retaining flat-output compatibility."""
+    available = discover_attention_steps(experiment_dir)
+    if not available:
+        if attention_step is not None:
+            raise ValueError(f"Flat attention output has no step named {attention_step!r}")
+        return experiment_dir, None
+    if attention_step is None:
+        if len(available) != 1:
+            raise RuntimeError(
+                f"Found {len(available)} attention steps under {experiment_dir}; "
+                "select one explicitly."
+            )
+        attention_step = available[0]
+    if attention_step not in available:
+        raise ValueError(f"Unavailable attention step {attention_step!r}; available: {available}")
+    return experiment_dir / attention_step, attention_step
+
+
+def resolve_attention_steps(
+    selection: Sequence[str] | None,
+    available: Sequence[str],
+) -> list[str | None]:
+    """Select recorded steps, or one None sentinel for a legacy flat output."""
+    available = list(available)
+    if not available:
+        if selection:
+            raise ValueError(f"Flat attention output has no steps: {list(selection)}")
+        return [None]
+    if selection is None:
+        return available
+    selected = list(dict.fromkeys(selection))
+    missing = sorted(set(selected) - set(available))
+    if missing:
+        raise ValueError(f"Unavailable attention steps: {missing}; available: {available}")
+    return selected
+
+
 def metadata(
     experiment_dir: Path,
     summary: dict,
@@ -159,21 +210,27 @@ def load_head_matrix(
 
 
 def estimate_shared_vmax(
-    experiment_dir: Path,
+    matrix_dirs: Path | Sequence[Path],
     expected_shape: tuple[int, int],
     layers: Sequence[int],
     heads: Sequence[int],
     percentile: float = 99.5,
     max_files: int = 24,
 ) -> float:
-    specs = [(layer, head) for layer in layers for head in heads]
+    matrix_dirs = [matrix_dirs] if isinstance(matrix_dirs, Path) else list(matrix_dirs)
+    specs = [
+        (matrix_dir, layer, head)
+        for matrix_dir in matrix_dirs
+        for layer in layers
+        for head in heads
+    ]
     if not specs:
-        raise ValueError("No layer/head files selected")
+        raise ValueError("No attention step/layer/head files selected")
     positions = np.linspace(0, len(specs) - 1, min(max_files, len(specs)), dtype=int)
     pooled = []
     for position in sorted(set(positions.tolist())):
-        layer, head = specs[position]
-        matrix = load_head_matrix(experiment_dir, expected_shape, layer, head)
+        matrix_dir, layer, head = specs[position]
+        matrix = load_head_matrix(matrix_dir, expected_shape, layer, head)
         stride = max(1, max(matrix.shape) // 256)
         values = matrix[::stride, ::stride]
         finite = values[np.isfinite(values)]
@@ -186,8 +243,9 @@ def estimate_shared_vmax(
     if not np.isfinite(vmax) or vmax <= 0.0:
         vmax = float(values.max())
     print(
-        f"color sample: {len(pooled)} files, {values.size:,} values, "
-        f"p{percentile:g}={vmax:.6g}, sampled max={float(values.max()):.6g}"
+        f"color sample: {len(pooled)} files across {len(matrix_dirs)} step(s), "
+        f"{values.size:,} values, p{percentile:g}={vmax:.6g}, "
+        f"sampled max={float(values.max()):.6g}"
     )
     return vmax
 
@@ -220,8 +278,16 @@ def centered_probability_norm(values: Iterable[np.ndarray], vmax: float):
     return TwoSlopeNorm(vmin=0.0, vcenter=vcenter, vmax=vmax), vcenter
 
 
-def output_dir(figures_root: Path, experiment_dir: Path, layer: int) -> Path:
-    path = figures_root / experiment_dir.name / f"layer{layer}"
+def output_dir(
+    figures_root: Path,
+    experiment_dir: Path,
+    layer: int,
+    attention_step: str | None = None,
+) -> Path:
+    path = figures_root / experiment_dir.name
+    if attention_step is not None:
+        path /= attention_step
+    path /= f"layer{layer}"
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -391,8 +457,9 @@ def render_layer_grid(
 
 def render_experiment(
     project_root: Path,
-    attention_link: str = "attn-exp-8gpu",
+    attention_link: str = "attn-exp-vv-10-3",
     experiment_slug: str | None = None,
+    attention_step: str | None = None,
     layers: Sequence[int] | None = None,
     heads: Sequence[int] | None = None,
     layer_grid: bool = False,
@@ -403,20 +470,21 @@ def render_experiment(
     dpi: int = 300,
 ) -> dict:
     experiment_dir, summary = locate_experiment(project_root, attention_link, experiment_slug)
+    matrix_dir, attention_step = resolve_attention_step(experiment_dir, attention_step)
     shape, available_layers, num_heads, row_bounds, history_bounds = metadata(experiment_dir, summary)
     layers = resolve_selection(layers, available_layers)
     heads = resolve_selection(heads, range(num_heads))
     if not layers or not heads:
         raise ValueError("At least one layer and one head must be selected")
     vmax = color_vmax or estimate_shared_vmax(
-        experiment_dir, shape, layers, heads, percentile=color_percentile, max_files=color_sample_files
+        matrix_dir, shape, layers, heads, percentile=color_percentile, max_files=color_sample_files
     )
     figures_root = project_root / "figures" / WORKSET_NAME
     small_paths = []
     grid_paths = []
     for layer in layers:
-        matrices = {head: load_head_matrix(experiment_dir, shape, layer, head) for head in heads}
-        layer_dir = output_dir(figures_root, experiment_dir, layer)
+        matrices = {head: load_head_matrix(matrix_dir, shape, layer, head) for head in heads}
+        layer_dir = output_dir(figures_root, experiment_dir, layer, attention_step)
         for head in heads:
             small_paths.extend(
                 render_head(matrices[head], layer, head, vmax, row_bounds, history_bounds, layer_dir, formats=formats, dpi=dpi)
@@ -430,6 +498,7 @@ def render_experiment(
     manifest = {
         "experiment": experiment_dir.name,
         "attention_link": attention_link,
+        "attention_step": attention_step,
         "logical_shape": list(shape),
         "layers": list(layers),
         "heads": list(heads),
@@ -446,18 +515,79 @@ def render_experiment(
         "small_figure_count": len(small_paths),
         "layer_grid_count": len(grid_paths),
     }
-    manifest_path = figures_root / experiment_dir.name / "render_manifest.json"
+    manifest_dir = figures_root / experiment_dir.name
+    if attention_step is not None:
+        manifest_dir /= attention_step
+    manifest_dir.mkdir(parents=True, exist_ok=True)
+    manifest_path = manifest_dir / "render_manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
     print(f"saved {len(small_paths)} small figures and {len(grid_paths)} layer grids")
     print(f"manifest: {manifest_path}")
     return manifest
 
 
+def render_attention_steps(
+    project_root: Path,
+    attention_link: str = "attn-exp-vv-10-3",
+    experiment_slug: str | None = None,
+    attention_steps: Sequence[str] | None = None,
+    layers: Sequence[int] | None = None,
+    heads: Sequence[int] | None = None,
+    layer_grid: bool = False,
+    formats: Sequence[str] = ("png", "pdf"),
+    color_vmax: float | None = None,
+    color_percentile: float = 99.5,
+    color_sample_files: int = 24,
+    dpi: int = 300,
+) -> dict[str, dict]:
+    """Render selected steps with one shared color scale for direct comparison."""
+    experiment_dir, summary = locate_experiment(project_root, attention_link, experiment_slug)
+    shape, available_layers, num_heads, _, _ = metadata(experiment_dir, summary)
+    layers = resolve_selection(layers, available_layers)
+    heads = resolve_selection(heads, range(num_heads))
+    steps = resolve_attention_steps(attention_steps, discover_attention_steps(experiment_dir))
+    matrix_dirs = [experiment_dir if step is None else experiment_dir / step for step in steps]
+    vmax = color_vmax or estimate_shared_vmax(
+        matrix_dirs,
+        shape,
+        layers,
+        heads,
+        percentile=color_percentile,
+        max_files=color_sample_files,
+    )
+
+    manifests = {}
+    for step in steps:
+        label = step or "flat"
+        print(f"rendering attention step: {label}", flush=True)
+        manifests[label] = render_experiment(
+            project_root,
+            attention_link=attention_link,
+            experiment_slug=experiment_slug,
+            attention_step=step,
+            layers=layers,
+            heads=heads,
+            layer_grid=layer_grid,
+            formats=formats,
+            color_vmax=vmax,
+            color_percentile=color_percentile,
+            color_sample_files=color_sample_files,
+            dpi=dpi,
+        )
+    return manifests
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project-root", type=Path, default=None)
-    parser.add_argument("--attention-link", default="attn-exp-8gpu")
+    parser.add_argument("--attention-link", default="attn-exp-vv-10-3")
     parser.add_argument("--experiment-slug", default=None)
+    parser.add_argument(
+        "--attention-step",
+        action="append",
+        default=None,
+        help="Repeat for selected step directories; default: every discovered step",
+    )
     parser.add_argument("--layer", type=int, action="append", default=None, help="Repeat for selected layers; default: all")
     parser.add_argument("--head", type=int, action="append", default=None, help="Repeat for selected heads; default: all")
     parser.add_argument("--grid", action="store_true", help="Also render one 4x6 figure per selected layer")
@@ -472,10 +602,11 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     project_root = find_project_root(args.project_root)
-    render_experiment(
+    render_attention_steps(
         project_root,
         attention_link=args.attention_link,
         experiment_slug=args.experiment_slug,
+        attention_steps=args.attention_step,
         layers=args.layer,
         heads=args.head,
         layer_grid=args.grid,
