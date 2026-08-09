@@ -27,14 +27,14 @@ from typing import Iterable, Sequence
 import matplotlib as mpl
 mpl.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.colors import Normalize
+from matplotlib.colors import Normalize, TwoSlopeNorm
 import numpy as np
 
 WORKSET_NAME = "26Aug9-Robotwin-VV-attention"
 
 
 def apply_plot_style() -> None:
-    """Use the publication-oriented style of the Pyramid-Forcing plots."""
+    """Use the compact serif heatmap style of the paper reference figure."""
     mpl.rcParams.update(
         {
             "svg.fonttype": "none",
@@ -42,19 +42,21 @@ def apply_plot_style() -> None:
             "ps.fonttype": 42,
             "font.family": "serif",
             "font.serif": ["Times New Roman", "Times", "Nimbus Roman", "DejaVu Serif"],
-            "font.size": 8,
-            "axes.titlesize": 6,
-            "axes.labelsize": 8,
-            "xtick.labelsize": 6,
-            "ytick.labelsize": 6,
-            "axes.linewidth": 0.6,
-            "xtick.major.width": 0.6,
-            "ytick.major.width": 0.6,
-            "xtick.major.size": 2.0,
-            "ytick.major.size": 2.0,
+            "font.size": 9,
+            "axes.titlesize": 9,
+            "axes.labelsize": 9,
+            "xtick.labelsize": 7,
+            "ytick.labelsize": 7,
+            "axes.linewidth": 0.75,
+            "xtick.major.width": 0.7,
+            "ytick.major.width": 0.7,
+            "xtick.major.size": 2.5,
+            "ytick.major.size": 2.5,
+            "xtick.direction": "out",
+            "ytick.direction": "out",
             "savefig.dpi": 600,
             "savefig.bbox": "tight",
-            "savefig.pad_inches": 0.01,
+            "savefig.pad_inches": 0.02,
         }
     )
 
@@ -195,19 +197,34 @@ def sparse_ticks(length: int, maximum: int = 5) -> list[int]:
     return sorted(set(np.linspace(0, length - 1, count, dtype=int).tolist()))
 
 
-def make_cmap(name: str):
+def make_cmap(name: str = "RdBu_r"):
     cmap = mpl.colormaps[name].copy()
-    cmap.set_bad("#e6e6e6")
+    cmap.set_bad("#f2f2f2")
     return cmap
+
+
+def centered_probability_norm(values: Iterable[np.ndarray], vmax: float):
+    """Map low/typical/high probabilities to blue/white/red without changing data."""
+    sampled = []
+    for matrix in values:
+        stride = max(1, max(matrix.shape) // 256)
+        finite = matrix[::stride, ::stride]
+        finite = finite[np.isfinite(finite)]
+        if finite.size:
+            sampled.append(finite)
+    if not sampled:
+        return Normalize(vmin=0.0, vmax=vmax, clip=True), vmax / 2.0
+    vcenter = float(np.median(np.concatenate(sampled)))
+    if not np.isfinite(vcenter) or not 0.0 < vcenter < vmax:
+        vcenter = vmax / 2.0
+    return TwoSlopeNorm(vmin=0.0, vcenter=vcenter, vmax=vmax), vcenter
 
 
 def draw_chunk_boundaries(ax, row_bounds: Sequence[int], history_bounds: Sequence[int]) -> None:
     for boundary in row_bounds[1:-1]:
-        ax.axhline(boundary - 0.5, color="white", linewidth=0.55, alpha=0.95)
-        ax.axhline(boundary - 0.5, color="black", linewidth=0.22, alpha=0.65)
+        ax.axhline(boundary - 0.5, color="#8c8c8c", linewidth=0.35, alpha=0.75)
     for boundary in history_bounds[1:-1]:
-        ax.axvline(boundary - 0.5, color="white", linewidth=0.55, alpha=0.95)
-        ax.axvline(boundary - 0.5, color="black", linewidth=0.22, alpha=0.65)
+        ax.axvline(boundary - 0.5, color="#8c8c8c", linewidth=0.35, alpha=0.75)
 
 
 def output_dir(figures_root: Path, experiment_dir: Path, layer: int) -> Path:
@@ -230,8 +247,8 @@ def render_head(
     show: bool = False,
 ) -> list[Path]:
     rows, columns = matrix.shape
-    cmap = make_cmap("magma")
-    norm = Normalize(vmin=0.0, vmax=vmax, clip=True)
+    cmap = make_cmap()
+    norm, vcenter = centered_probability_norm([matrix], vmax)
     fig, ax = plt.subplots(figsize=figsize)
     image = ax.imshow(
         np.ma.masked_invalid(matrix),
@@ -246,15 +263,23 @@ def render_head(
     ax.set_ylim(rows - 0.5, -0.5)
     ax.set_xticks(sparse_ticks(columns))
     ax.set_yticks(sparse_ticks(rows))
-    ax.set_title(f"L{layer:02d} H{head:02d}", pad=2.0, fontsize=7)
+    ax.text(
+        0.025,
+        0.975,
+        f"L{layer} H{head}",
+        transform=ax.transAxes,
+        ha="left",
+        va="top",
+        fontsize=9,
+    )
     ax.set_xlabel("K history token id (small → large)", labelpad=1.5, fontsize=6)
     ax.set_ylabel("Σ Q current token id (top → bottom; small → large)", labelpad=1.5, fontsize=6)
     ax.tick_params(axis="both", pad=0.8, labelsize=5)
     for spine in ax.spines.values():
         spine.set_linewidth(0.45)
     colorbar = fig.colorbar(image, ax=ax, fraction=0.046, pad=0.025)
-    colorbar.set_ticks([0.0, vmax])
-    colorbar.set_ticklabels(["0", f"{vmax:.2g}"])
+    colorbar.set_ticks([0.0, vcenter, vmax])
+    colorbar.set_ticklabels(["0", f"{vcenter:.2g}", f"{vmax:.2g}"])
     colorbar.ax.tick_params(labelsize=5, pad=0.8, length=1.5)
     colorbar.set_label("VV attention probability", fontsize=5.5, labelpad=1.5)
     colorbar.outline.set_linewidth(0.4)
@@ -282,14 +307,38 @@ def render_layer_grid(
     history_bounds: Sequence[int],
     save_dir: Path,
     formats: Sequence[str] = ("png", "pdf"),
+    columns_per_row: int = 6,
     dpi: int = 300,
 ) -> list[Path]:
-    if len(heads) > 24:
-        raise ValueError("A 4x6 grid supports at most 24 heads")
+    if columns_per_row < 1:
+        raise ValueError("columns_per_row must be positive")
+    if not heads:
+        raise ValueError("At least one head is required")
     rows, columns = next(iter(matrices.values())).shape
-    cmap = make_cmap("magma")
-    norm = Normalize(vmin=0.0, vmax=vmax, clip=True)
-    fig, axes = plt.subplots(4, 6, figsize=(10.5, 7.2), squeeze=False)
+    grid_columns = min(columns_per_row, len(heads))
+    grid_rows = int(np.ceil(len(heads) / grid_columns))
+    cmap = make_cmap()
+    norm, vcenter = centered_probability_norm(matrices.values(), vmax)
+
+    # Keep every heatmap square and reserve a dedicated column for the colorbar.
+    fig = plt.figure(figsize=(1.34 * grid_columns + 0.55, 1.34 * grid_rows + 0.65))
+    grid = fig.add_gridspec(
+        grid_rows,
+        grid_columns + 1,
+        width_ratios=[1.0] * grid_columns + [0.055],
+        left=0.065,
+        right=0.965,
+        bottom=0.13,
+        top=0.985,
+        wspace=0.14,
+        hspace=0.16,
+    )
+    axes = np.empty((grid_rows, grid_columns), dtype=object)
+    for row in range(grid_rows):
+        for column in range(grid_columns):
+            axes[row, column] = fig.add_subplot(grid[row, column])
+    colorbar_ax = fig.add_subplot(grid[:, -1])
+
     image = None
     for index, ax in enumerate(axes.ravel()):
         if index >= len(heads):
@@ -305,33 +354,39 @@ def render_layer_grid(
             interpolation="nearest",
         )
         draw_chunk_boundaries(ax, row_bounds, history_bounds)
-        row, column = divmod(index, 6)
+        row, column = divmod(index, grid_columns)
         ax.set_xlim(-0.5, columns - 0.5)
         ax.set_ylim(rows - 0.5, -0.5)
-        ax.set_title(f"H{head:02d}", pad=1.0, fontsize=7)
         ax.set_xticks(sparse_ticks(columns))
         ax.set_yticks(sparse_ticks(rows))
-        ax.tick_params(axis="both", pad=0.5, labelsize=5, length=1.5)
-        if row != 3:
-            ax.set_xticklabels([])
-        else:
-            ax.set_xlabel("K history", fontsize=6, labelpad=1.0)
-        if column != 0:
-            ax.set_yticklabels([])
-        else:
-            ax.set_ylabel("Q current", fontsize=6, labelpad=1.0)
+        ax.tick_params(
+            axis="both",
+            pad=0.7,
+            labelsize=7,
+            length=2.5,
+            labelbottom=row == grid_rows - 1,
+            labelleft=column == 0,
+        )
+        ax.text(
+            0.025,
+            0.975,
+            f"H{head}",
+            transform=ax.transAxes,
+            ha="left",
+            va="top",
+            fontsize=9,
+        )
         for spine in ax.spines.values():
-            spine.set_linewidth(0.4)
+            spine.set_linewidth(0.75)
 
-    colorbar = fig.colorbar(image, ax=axes.ravel().tolist(), fraction=0.018, pad=0.02)
-    colorbar.set_ticks([0.0, vmax])
-    colorbar.set_ticklabels(["0", f"{vmax:.2g}"])
-    colorbar.ax.tick_params(labelsize=6, pad=1.0, length=1.5)
-    colorbar.set_label("VV attention probability", fontsize=7, labelpad=3)
-    colorbar.outline.set_linewidth(0.4)
-    fig.suptitle(f"Layer {layer:02d} VV attention — 4×6 heads", fontsize=11, y=0.995)
-    fig.text(0.5, 0.012, "gray = future K unavailable; Q top→bottom and K left→right are small→large", ha="center", fontsize=7, color="#555555")
-    fig.tight_layout(rect=(0, 0.03, 0.96, 0.97))
+    colorbar = fig.colorbar(image, cax=colorbar_ax)
+    colorbar.set_ticks([0.0, vcenter, vmax])
+    colorbar.set_ticklabels(["0", f"{vcenter:.2g}", f"{vmax:.2g}"])
+    colorbar.ax.tick_params(labelsize=7, pad=2.0, length=2.5)
+    colorbar.outline.set_linewidth(0.75)
+    fig.supxlabel("K history token id", fontsize=9, y=0.065)
+    fig.supylabel("Q current token id", fontsize=9, x=0.012)
+    fig.text(0.5, 0.018, f"Layer {layer} VV attention probability", ha="center", fontsize=11)
 
     saved = []
     stem = save_dir / f"layer{layer:02d}_vv_attention_4x6"
@@ -392,7 +447,8 @@ def render_experiment(
             "columns": "K_history; small-to-large from left to right",
         },
         "future_columns": "gray / NaN",
-        "cmap": "magma",
+        "cmap": "RdBu_r",
+        "color_center": "sampled median probability",
         "vmin": 0.0,
         "vmax": vmax,
         "formats": list(formats),
