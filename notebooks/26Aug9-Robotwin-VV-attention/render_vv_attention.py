@@ -258,11 +258,26 @@ def make_cmap(name: str = "RdBu_r"):
 
 
 def shared_probability_norm(vmax: float) -> tuple[Normalize, float]:
-    """Return one fixed linear color mapping shared by every rendered head."""
+    """Return one linear color mapping for a layer's selected heads."""
     if not np.isfinite(vmax) or vmax <= 0.0:
         raise ValueError(f"vmax must be finite and positive, got {vmax}")
     vcenter = vmax / 2.0
     return Normalize(vmin=0.0, vmax=vmax, clip=True), vcenter
+
+
+def layer_probability_vmax(
+    matrices: dict[int, np.ndarray],
+    explicit_vmax: float | None = None,
+) -> float:
+    """Use one exact colorbar maximum for every selected head in a layer."""
+    if explicit_vmax is not None:
+        vmax = float(explicit_vmax)
+        shared_probability_norm(vmax)
+        return vmax
+    maxima = [float(np.nanmax(matrix)) for matrix in matrices.values()]
+    vmax = max(maxima)
+    shared_probability_norm(vmax)
+    return vmax
 
 
 def output_dir(
@@ -451,7 +466,7 @@ def render_experiment(
     heads: Sequence[int] | None = None,
     layer_grid: bool = False,
     formats: Sequence[str] = ("png", "pdf"),
-    color_vmax: float = ATTENTION_PROBABILITY_VMAX,
+    color_vmax: float | None = None,
     dpi: int = 300,
 ) -> dict:
     experiment_dir, summary = locate_experiment(project_root, attention_link, experiment_slug)
@@ -464,23 +479,25 @@ def render_experiment(
     heads = resolve_selection(heads, range(num_heads))
     if not layers or not heads:
         raise ValueError("At least one layer and one head must be selected")
-    vmax = float(color_vmax)
-    shared_probability_norm(vmax)
     figures_root = project_root / "figures" / WORKSET_NAME
     small_paths = []
     grid_paths = []
+    layer_vmaxes = {}
     for layer in layers:
         matrices = {head: load_head_matrix(matrix_dir, shape, layer, head) for head in heads}
+        layer_vmax = layer_probability_vmax(matrices, color_vmax)
+        layer_vmaxes[layer] = layer_vmax
         layer_dir = output_dir(figures_root, experiment_dir, layer, attention_step)
         for head in heads:
             small_paths.extend(
-                render_head(matrices[head], layer, head, vmax, row_bounds, history_bounds, layer_dir, formats=formats, dpi=dpi)
+                render_head(matrices[head], layer, head, layer_vmax, row_bounds, history_bounds, layer_dir, formats=formats, dpi=dpi)
             )
         if layer_grid:
             grid_paths.extend(
-                render_layer_grid(matrices, layer, heads, vmax, row_bounds, history_bounds, layer_dir, formats=formats, dpi=dpi)
+                render_layer_grid(matrices, layer, heads, layer_vmax, row_bounds, history_bounds, layer_dir, formats=formats, dpi=dpi)
             )
-        print(f"rendered layer {layer}: {len(heads)} heads" + (" + 4x6 grid" if layer_grid else ""), flush=True)
+        suffix = " + 4x6 grid" if layer_grid else ""
+        print(f"rendered layer {layer}: {len(heads)} heads{suffix}; shared vmax={layer_vmax:.6g}", flush=True)
 
     manifest = {
         "experiment": experiment_dir.name,
@@ -496,12 +513,16 @@ def render_experiment(
         },
         "future_columns": "gray / NaN",
         "cmap": "RdBu_r",
-        "colorbar_scope": "identical for every selected step, layer, and head",
-        "color_center": "fixed linear midpoint",
-        "scale_source": "fixed attention probability range; no percentile clipping",
+        "colorbar_scope": "identical across all selected heads within each layer",
+        "color_center": "linear midpoint of each layer range",
+        "scale_source": (
+            "explicit shared maximum for every layer"
+            if color_vmax is not None
+            else "exact finite maximum across selected heads in each layer; no percentile clipping"
+        ),
         "vmin": 0.0,
-        "vcenter": vmax / 2.0,
-        "vmax": vmax,
+        "layer_vcenter": {str(layer): vmax / 2.0 for layer, vmax in layer_vmaxes.items()},
+        "layer_vmax": {str(layer): vmax for layer, vmax in layer_vmaxes.items()},
         "formats": list(formats),
         "small_figure_count": len(small_paths),
         "layer_grid_count": len(grid_paths),
@@ -526,10 +547,10 @@ def render_attention_steps(
     heads: Sequence[int] | None = None,
     layer_grid: bool = False,
     formats: Sequence[str] = ("png", "pdf"),
-    color_vmax: float = ATTENTION_PROBABILITY_VMAX,
+    color_vmax: float | None = None,
     dpi: int = 300,
 ) -> dict[str, dict]:
-    """Render selected steps on the fixed attention-probability range [0, 1]."""
+    """Render selected steps with one shared colorbar per layer."""
     experiment_dir, summary = locate_experiment(project_root, attention_link, experiment_slug)
     selection = DEFAULT_ATTENTION_STEPS if attention_steps is None else attention_steps
     steps = resolve_attention_steps(selection, discover_attention_steps(experiment_dir))
@@ -540,8 +561,6 @@ def render_attention_steps(
             raise ValueError(f"Attention metadata differs across steps; mismatch at {step}")
     layers = resolve_selection(layers, available_layers)
     heads = resolve_selection(heads, range(num_heads))
-    vmax = float(color_vmax)
-    shared_probability_norm(vmax)
 
     manifests = {}
     for step in steps:
@@ -556,7 +575,7 @@ def render_attention_steps(
             heads=heads,
             layer_grid=layer_grid,
             formats=formats,
-            color_vmax=vmax,
+            color_vmax=color_vmax,
             dpi=dpi,
         )
     return manifests
@@ -580,8 +599,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--vmax",
         type=float,
-        default=ATTENTION_PROBABILITY_VMAX,
-        help="Shared probability colorbar maximum; default: 1.0",
+        default=None,
+        help="Optional fixed maximum for every layer; default: exact maximum shared by all selected heads within each layer",
     )
     parser.add_argument("--dpi", type=int, default=300)
     return parser.parse_args()
