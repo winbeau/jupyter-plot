@@ -159,15 +159,40 @@ def resolve_attention_steps(
     return selected
 
 
+def attention_step_summary(summary: dict, attention_step: str | None) -> dict:
+    """Resolve metadata stored either at the root or under a steps entry."""
+    step_summaries = summary.get("steps")
+    if not step_summaries:
+        return summary
+    if attention_step is None:
+        if len(step_summaries) != 1:
+            raise RuntimeError(
+                f"Summary contains {len(step_summaries)} attention steps; select one explicitly."
+            )
+        return step_summaries[0]
+    matches = [
+        step_summary
+        for step_summary in step_summaries
+        if step_summary.get("csv_directory") == attention_step
+    ]
+    if len(matches) != 1:
+        available = [step_summary.get("csv_directory") for step_summary in step_summaries]
+        raise ValueError(f"No unique summary for {attention_step!r}; available: {available}")
+    return matches[0]
+
+
 def metadata(
     experiment_dir: Path,
     summary: dict,
+    attention_step: str | None = None,
 ) -> tuple[tuple[int, int], list[int], int, list[int], list[int]]:
-    shape = tuple(int(value) for value in summary["logical_shape_per_csv"])
+    del experiment_dir  # Retained in the public signature for notebook compatibility.
+    step_summary = attention_step_summary(summary, attention_step)
+    shape = tuple(int(value) for value in step_summary["logical_shape_per_csv"])
     layers = [int(value) for value in summary["layer_indices"]]
-    num_heads = int(summary["num_heads"])
-    row_bounds = [0, *map(int, summary["row_chunk_boundaries"]), shape[0]]
-    history_bounds = [0, *map(int, summary["history_chunk_boundaries"]), shape[1]]
+    num_heads = int(step_summary["num_heads"])
+    row_bounds = [0, *map(int, step_summary["row_chunk_boundaries"]), shape[0]]
+    history_bounds = [0, *map(int, step_summary["history_chunk_boundaries"]), shape[1]]
     return shape, layers, num_heads, row_bounds, history_bounds
 
 
@@ -471,7 +496,10 @@ def render_experiment(
 ) -> dict:
     experiment_dir, summary = locate_experiment(project_root, attention_link, experiment_slug)
     matrix_dir, attention_step = resolve_attention_step(experiment_dir, attention_step)
-    shape, available_layers, num_heads, row_bounds, history_bounds = metadata(experiment_dir, summary)
+    step_summary = attention_step_summary(summary, attention_step)
+    shape, available_layers, num_heads, row_bounds, history_bounds = metadata(
+        experiment_dir, summary, attention_step
+    )
     layers = resolve_selection(layers, available_layers)
     heads = resolve_selection(heads, range(num_heads))
     if not layers or not heads:
@@ -499,6 +527,7 @@ def render_experiment(
         "experiment": experiment_dir.name,
         "attention_link": attention_link,
         "attention_step": attention_step,
+        "scheduler_timestep": step_summary.get("scheduler_timestep"),
         "logical_shape": list(shape),
         "layers": list(layers),
         "heads": list(heads),
@@ -542,10 +571,14 @@ def render_attention_steps(
 ) -> dict[str, dict]:
     """Render selected steps with one shared color scale for direct comparison."""
     experiment_dir, summary = locate_experiment(project_root, attention_link, experiment_slug)
-    shape, available_layers, num_heads, _, _ = metadata(experiment_dir, summary)
+    steps = resolve_attention_steps(attention_steps, discover_attention_steps(experiment_dir))
+    shape, available_layers, num_heads, _, _ = metadata(experiment_dir, summary, steps[0])
+    for step in steps[1:]:
+        step_shape, step_layers, step_heads, _, _ = metadata(experiment_dir, summary, step)
+        if (step_shape, step_layers, step_heads) != (shape, available_layers, num_heads):
+            raise ValueError(f"Attention metadata differs across steps; mismatch at {step}")
     layers = resolve_selection(layers, available_layers)
     heads = resolve_selection(heads, range(num_heads))
-    steps = resolve_attention_steps(attention_steps, discover_attention_steps(experiment_dir))
     matrix_dirs = [experiment_dir if step is None else experiment_dir / step for step in steps]
     vmax = color_vmax or estimate_shared_vmax(
         matrix_dirs,
