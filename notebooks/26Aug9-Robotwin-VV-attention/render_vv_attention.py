@@ -511,7 +511,7 @@ def render_layer_grid(
             pad=0.7,
             labelsize=7,
             length=2.5,
-            labelbottom=row == grid_rows - 1,
+            labelbottom=row == grid_rows - 1 and column % 2 == 0,
             labelleft=column == 0,
         )
         ax.text(
