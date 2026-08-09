@@ -17,6 +17,7 @@ Using `uv` (recommended if you already have it):
 
 ```bash
 uv sync
+uv run python -m ipykernel install --user --name jupyter-plot --display-name "Python (jupyter-plot)"
 uv run jupyter lab
 ```
 
@@ -28,6 +29,22 @@ source .venv/bin/activate
 pip install -e .
 jupyter lab
 ```
+
+The `ipykernel` package is already declared in the development dependency group, so the `uv add ipykernel` step is unnecessary. The kernel registration command only needs to be run once.
+
+For a remote server, start JupyterLab with the short command:
+
+```bash
+jupyter lab --allow-root --ip=0.0.0.0 --port=18888 --no-browser
+```
+
+Keep JupyterLab private and access it through a static local SSH forward:
+
+```bash
+ssh -N -L 18888:127.0.0.1:18888 <target-server>
+```
+
+Then open `http://127.0.0.1:18888` locally.
 
 Note: this repo uses `pyproject.toml` for dependencies.
 
