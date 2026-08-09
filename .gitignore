@@ -45,3 +45,9 @@ figures/**/sheet_overview.png
 figures/**/frame_export_summary.csv
 figures/**/*.csv
 figures/**/*.done
+
+# Local-only Robotwin inputs; keep only each workset directory in git.
+/data/26Aug9-Robotwin-VV-attention/*
+!/data/26Aug9-Robotwin-VV-attention/.gitkeep
+/data/26Aug9-Robotwin-VV-density/*
+!/data/26Aug9-Robotwin-VV-density/.gitkeep

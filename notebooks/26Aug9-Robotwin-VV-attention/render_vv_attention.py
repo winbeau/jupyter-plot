@@ -220,13 +220,6 @@ def centered_probability_norm(values: Iterable[np.ndarray], vmax: float):
     return TwoSlopeNorm(vmin=0.0, vcenter=vcenter, vmax=vmax), vcenter
 
 
-def draw_chunk_boundaries(ax, row_bounds: Sequence[int], history_bounds: Sequence[int]) -> None:
-    for boundary in row_bounds[1:-1]:
-        ax.axhline(boundary - 0.5, color="#8c8c8c", linewidth=0.35, alpha=0.75)
-    for boundary in history_bounds[1:-1]:
-        ax.axvline(boundary - 0.5, color="#8c8c8c", linewidth=0.35, alpha=0.75)
-
-
 def output_dir(figures_root: Path, experiment_dir: Path, layer: int) -> Path:
     path = figures_root / experiment_dir.name / f"layer{layer}"
     path.mkdir(parents=True, exist_ok=True)
@@ -258,7 +251,6 @@ def render_head(
         aspect="equal",
         interpolation="nearest",
     )
-    draw_chunk_boundaries(ax, row_bounds, history_bounds)
     ax.set_xlim(-0.5, columns - 0.5)
     ax.set_ylim(rows - 0.5, -0.5)
     ax.set_xticks(sparse_ticks(columns))
@@ -353,7 +345,6 @@ def render_layer_grid(
             aspect="equal",
             interpolation="nearest",
         )
-        draw_chunk_boundaries(ax, row_bounds, history_bounds)
         row, column = divmod(index, grid_columns)
         ax.set_xlim(-0.5, columns - 0.5)
         ax.set_ylim(rows - 0.5, -0.5)
