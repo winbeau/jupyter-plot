@@ -8,14 +8,14 @@ The CSV convention is:
 
 Examples from the jupyter-plot repository root:
 
-  # One small figure from the first recorded step
+  # One small figure from the first selected step
   python3 notebooks/26Aug9-Robotwin-VV-attention/render_vv_attention.py \
-      --attention-link attn-exp-vv-10-3 --attention-step step_000 \
+      --attention-link attn-exp-vv-10-6 --attention-step step_000 \
       --layer 0 --head 0 --formats png
 
-  # Render every discovered step, all heads, and one 4x6 grid per layer
+  # Render the default selected steps (0/4/9/14/19/24)
   python3 notebooks/26Aug9-Robotwin-VV-attention/render_vv_attention.py \
-      --attention-link attn-exp-vv-10-3 --grid --formats png pdf
+      --attention-link attn-exp-vv-10-6 --grid --formats png pdf
 """
 
 from __future__ import annotations
@@ -32,6 +32,15 @@ from matplotlib.colors import Normalize
 import numpy as np
 
 WORKSET_NAME = "26Aug9-Robotwin-VV-attention"
+DEFAULT_ATTENTION_LINK = "attn-exp-vv-10-6"
+DEFAULT_ATTENTION_STEPS = (
+    "step_000",
+    "step_004",
+    "step_009",
+    "step_014",
+    "step_019",
+    "step_024",
+)
 ATTENTION_PROBABILITY_VMAX = 1.0
 
 
@@ -435,7 +444,7 @@ def render_layer_grid(
 
 def render_experiment(
     project_root: Path,
-    attention_link: str = "attn-exp-vv-10-3",
+    attention_link: str = DEFAULT_ATTENTION_LINK,
     experiment_slug: str | None = None,
     attention_step: str | None = None,
     layers: Sequence[int] | None = None,
@@ -510,7 +519,7 @@ def render_experiment(
 
 def render_attention_steps(
     project_root: Path,
-    attention_link: str = "attn-exp-vv-10-3",
+    attention_link: str = DEFAULT_ATTENTION_LINK,
     experiment_slug: str | None = None,
     attention_steps: Sequence[str] | None = None,
     layers: Sequence[int] | None = None,
@@ -522,7 +531,8 @@ def render_attention_steps(
 ) -> dict[str, dict]:
     """Render selected steps on the fixed attention-probability range [0, 1]."""
     experiment_dir, summary = locate_experiment(project_root, attention_link, experiment_slug)
-    steps = resolve_attention_steps(attention_steps, discover_attention_steps(experiment_dir))
+    selection = DEFAULT_ATTENTION_STEPS if attention_steps is None else attention_steps
+    steps = resolve_attention_steps(selection, discover_attention_steps(experiment_dir))
     shape, available_layers, num_heads, _, _ = metadata(experiment_dir, summary, steps[0])
     for step in steps[1:]:
         step_shape, step_layers, step_heads, _, _ = metadata(experiment_dir, summary, step)
@@ -555,13 +565,13 @@ def render_attention_steps(
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project-root", type=Path, default=None)
-    parser.add_argument("--attention-link", default="attn-exp-vv-10-3")
+    parser.add_argument("--attention-link", default=DEFAULT_ATTENTION_LINK)
     parser.add_argument("--experiment-slug", default=None)
     parser.add_argument(
         "--attention-step",
         action="append",
         default=None,
-        help="Repeat for selected step directories; default: every discovered step",
+        help="Repeat for selected step directories; default: 0/4/9/14/19/24",
     )
     parser.add_argument("--layer", type=int, action="append", default=None, help="Repeat for selected layers; default: all")
     parser.add_argument("--head", type=int, action="append", default=None, help="Repeat for selected heads; default: all")
