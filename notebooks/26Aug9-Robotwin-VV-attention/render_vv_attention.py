@@ -251,8 +251,11 @@ def sparse_ticks(length: int, maximum: int = 5) -> list[int]:
     return sorted(set(np.linspace(0, length - 1, count, dtype=int).tolist()))
 
 
-def make_cmap(name: str = "RdBu_r"):
-    cmap = mpl.colormaps[name].copy()
+def make_cmap():
+    cmap = mpl.colors.LinearSegmentedColormap.from_list(
+        "white_to_red",
+        ("#ffffff", "#fee2e2", "#fca5a5", "#ef4444", "#b91c1c"),
+    )
     cmap.set_bad("#f2f2f2")
     return cmap
 
@@ -512,7 +515,7 @@ def render_experiment(
             "columns": "K_history; small-to-large from left to right",
         },
         "future_columns": "gray / NaN",
-        "cmap": "RdBu_r",
+        "cmap": "white_to_red (0 = pure white, larger values = deeper red)",
         "colorbar_scope": "identical across all selected heads within each layer",
         "color_center": "linear midpoint of each layer range",
         "scale_source": (
