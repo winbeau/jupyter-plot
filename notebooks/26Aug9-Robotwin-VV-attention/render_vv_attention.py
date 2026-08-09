@@ -28,7 +28,7 @@ from typing import Iterable, Sequence
 import matplotlib as mpl
 mpl.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.colors import Normalize, TwoSlopeNorm
+from matplotlib.colors import Normalize
 import numpy as np
 
 WORKSET_NAME = "26Aug9-Robotwin-VV-attention"
@@ -286,21 +286,12 @@ def make_cmap(name: str = "RdBu_r"):
     return cmap
 
 
-def centered_probability_norm(values: Iterable[np.ndarray], vmax: float):
-    """Map low/typical/high probabilities to blue/white/red without changing data."""
-    sampled = []
-    for matrix in values:
-        stride = max(1, max(matrix.shape) // 256)
-        finite = matrix[::stride, ::stride]
-        finite = finite[np.isfinite(finite)]
-        if finite.size:
-            sampled.append(finite)
-    if not sampled:
-        return Normalize(vmin=0.0, vmax=vmax, clip=True), vmax / 2.0
-    vcenter = float(np.median(np.concatenate(sampled)))
-    if not np.isfinite(vcenter) or not 0.0 < vcenter < vmax:
-        vcenter = vmax / 2.0
-    return TwoSlopeNorm(vmin=0.0, vcenter=vcenter, vmax=vmax), vcenter
+def shared_probability_norm(vmax: float) -> tuple[Normalize, float]:
+    """Return one fixed linear color mapping shared by every rendered head."""
+    if not np.isfinite(vmax) or vmax <= 0.0:
+        raise ValueError(f"vmax must be finite and positive, got {vmax}")
+    vcenter = vmax / 2.0
+    return Normalize(vmin=0.0, vmax=vmax, clip=True), vcenter
 
 
 def output_dir(
@@ -332,7 +323,7 @@ def render_head(
 ) -> list[Path]:
     rows, columns = matrix.shape
     cmap = make_cmap()
-    norm, vcenter = centered_probability_norm([matrix], vmax)
+    norm, vcenter = shared_probability_norm(vmax)
     fig, ax = plt.subplots(figsize=figsize)
     image = ax.imshow(
         np.ma.masked_invalid(matrix),
@@ -401,7 +392,7 @@ def render_layer_grid(
     grid_columns = min(columns_per_row, len(heads))
     grid_rows = int(np.ceil(len(heads) / grid_columns))
     cmap = make_cmap()
-    norm, vcenter = centered_probability_norm(matrices.values(), vmax)
+    norm, vcenter = shared_probability_norm(vmax)
 
     # Keep every heatmap square and reserve a dedicated column for the colorbar.
     fig = plt.figure(figsize=(1.34 * grid_columns + 0.55, 1.34 * grid_rows + 0.65))
@@ -537,8 +528,10 @@ def render_experiment(
         },
         "future_columns": "gray / NaN",
         "cmap": "RdBu_r",
-        "color_center": "sampled median probability",
+        "colorbar_scope": "identical for every selected step, layer, and head",
+        "color_center": "fixed linear midpoint",
         "vmin": 0.0,
+        "vcenter": vmax / 2.0,
         "vmax": vmax,
         "formats": list(formats),
         "small_figure_count": len(small_paths),
